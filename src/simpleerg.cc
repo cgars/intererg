@@ -38,18 +38,18 @@ namespace intererg {
                   "LEDNr");
         addNumber("PWM", "Pulsewidth of the LED", 1.0, 1.0, 4095.0, 1.0, "bit",
                   "bit");
-
         addNumber("Current", "Current for the LED", 1.0, 1.0, 4095.0, 1.0,
                   "bit",
                   "bit");
         addText("Filename");
-        plot.lock();
-        plot.resize(2, 1, true);
-        plot.unlock();
-        plot[0].setTitle("ERG");
-        plot[1].setTitle("mean ERG");
-        plot[1].setXLabel("time [s]");
-        setWidget(&plot);
+
+        plots.lock();
+        plots.resize(2, 1, true);
+        plots.unlock();
+        plots[0].setTitle("ERG");
+        plots[1].setTitle("mean ERG");
+        plots[1].setXLabel("time [s]");
+        setWidget(&plots);
     }
 
     int simpleErg::main(void) {
@@ -59,8 +59,8 @@ namespace intererg {
         const int pwm = int(number("PWM"));
         const int led = int(number("LED"));
         const int duration = int(number("Duration"));
-        plot[0].clear();
-        plot[1].clear();
+        plots[0].clear();
+        plots[1].clear();
         tracePlotContinuous(10);
 
         // initialize hardware -------------------------------------------------
@@ -77,7 +77,7 @@ namespace intererg {
         const EventData &trigger_begin = events("Trigger-1");
         const EventData &trigger_end = events("Trigger-2");
 
-        //do ergs here -------------------------------------------------------------
+        //do ergs here ---------------------------------------------------------
         const int startIndex = InTrace.currentIndex();
         int counter;
         larray->setLEDParameter(led, led, pwm, pwm, current, current,
@@ -86,30 +86,29 @@ namespace intererg {
         sleep((duration * 2 * repeats) / 1000);
         const int endIndex = InTrace.currentIndex();
 
-        //plot the individual ergs -------------------------------------------------
+        //plot the individual ergs ---------------------------------------------
         vector<SampleDataF> ergVector;
         for (counter = repeats / 2 - 1; counter > -1; counter--) {
             SampleDataF data(0.0, duration, InTrace.stepsize());
             InTrace.copy(trigger_begin.back(counter), data);
             ergVector.push_back(data);
-            plot.lock();
-            //P.clear();
-            plot[0].plot(data, 1.0, Plot::Orange, 2, Plot::Solid);
-            plot[0].draw();
-            plot.unlock();
+            plots.lock();
+            plots[0].plot(data, 1.0, Plot::Orange, 2, Plot::Solid);
+            plots[0].draw();
+            plots.unlock();
         }
 
-        //plot mean erg-------------------------------------------------------------
+        //plot mean erg---------------------------------------------------------
         SampleDataF meanerg(0.0, duration, InTrace.stepsize());
         average(meanerg, ergVector);
-        plot.lock();
-        plot[1].plot(meanerg, 1.0, Plot::Orange, 2, Plot::Solid);
-        plot[1].draw();
-        plot.unlock();
+        plots.lock();
+        plots[1].plot(meanerg, 1.0, Plot::Orange, 2, Plot::Solid);
+        plots[1].draw();
+        plots.unlock();
 
-        //save data ----------------------------------------------------------------
+        //save data ------------------------------------------------------------
         ofstream ergFile(addPath(text("Filename")).c_str(),
-                    ofstream::out | ofstream::app);
+                         ofstream::out | ofstream::app);
         ergFile << '\n';
         TableKey datakey;
         datakey.addNumber("ERG", "mv", "%6.3f");
@@ -121,6 +120,7 @@ namespace intererg {
             ergFile << '\n';
         }
         ergFile << "\n";
+        ergFile.close();
         return Completed;
     }
 
