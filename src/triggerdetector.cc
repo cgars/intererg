@@ -19,11 +19,11 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <relacs/erg/triggerdetector.h>
+#include <relacs/intererg/triggerdetector.h>
 
 using namespace relacs;
 
-namespace erg {
+namespace intererg {
 
     TriggerDetector::TriggerDetector(const string &ident, int mode)
             : Filter(ident, mode, SingleAnalogDetector, 1, "TriggerDetector",
@@ -77,8 +77,8 @@ namespace erg {
         return 1;
     }
 
-    addFilter(TriggerDetector, erg);
+    addFilter(TriggerDetector, intererg);
 
-}; /* namespace erg */
+}; /* namespace intererg */
 
 #include "moc_triggerdetector.cc"

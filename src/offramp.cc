@@ -1,5 +1,5 @@
 /*
-  erg/offramp.cc
+  intererg/offramp.cc
   Ramps the Duration of the off pulse
 
   RELACS - Relaxed ELectrophysiological data Acquisition, Control, and Stimulation
@@ -19,12 +19,12 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <relacs/erg/offramp.h>
+#include <relacs/intererg/offramp.h>
 #include <string>
 
 using namespace relacs;
 
-namespace erg {
+namespace intererg {
 
 
     OffRamp::OffRamp(void)
@@ -111,7 +111,7 @@ namespace erg {
     }
 
 
-    addRePro(OffRamp, erg);
+    addRePro(OffRamp, intererg);
 
 }; /* namespace erg */
 

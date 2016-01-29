@@ -19,12 +19,12 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <relacs/erg/patch2led.h>
+#include <relacs/intererg/patch2led.h>
 #include <relacs/plot.h>
 
 using namespace relacs;
 
-namespace erg {
+namespace intererg {
 
 
     Patch2LED::Patch2LED(void)
@@ -443,7 +443,7 @@ namespace erg {
                 potential_m_1);
     }
 
-    addRePro(Patch2LED, erg);
-}; /* namespace erg */
+    addRePro(Patch2LED, intererg);
+}; /* namespace intererg */
 
 #include "moc_patch2led.cc"

@@ -19,13 +19,13 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <relacs/erg/lightramp.h>
+#include <relacs/intererg/lightramp.h>
 #include <relacs/plot.h>
 #include <string>
 
 using namespace relacs;
 
-namespace erg {
+namespace intererg {
 
 
     LightRamp::LightRamp(void)
@@ -180,8 +180,8 @@ namespace erg {
     }
 
 
-    addRePro(LightRamp, erg);
+    addRePro(LightRamp, intererg);
 
-}; /* namespace erg */
+}; /* namespace intererg */
 
 #include "moc_lightramp.cc"

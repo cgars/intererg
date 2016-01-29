@@ -1,5 +1,5 @@
 /*
- erg/simpleerg.cc
+ intererg/simpleerg.cc
 
  RELACS - Relaxed ELectrophysiological data Acquisition, Control, and Stimulation
  Copyright (C) 2002-2011 Jan Benda <benda@bio.lmu.de>
@@ -18,14 +18,12 @@
  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <relacs/erg/simpleerg.h>
+#include <relacs/intererg/simpleerg.h>
 #include <relacs/tablekey.h>
-#include <typeinfo>
-
 
 using namespace relacs;
 
-namespace erg {
+namespace intererg {
 
     simpleErg::simpleErg(void) :
             RePro("simpleErg", "erg", "Christian Garbers", "0.1",
@@ -45,27 +43,27 @@ namespace erg {
                   "bit",
                   "bit");
         addText("Filename");
-        P.lock();
-        P.resize(2, 1, true);
-        P.unlock();
-        P[0].setTitle("ERG");
-        P[1].setTitle("mean ERG");
-        P[1].setXLabel("time [s]");
-        setWidget(&P);
+        plot.lock();
+        plot.resize(2, 1, true);
+        plot.unlock();
+        plot[0].setTitle("ERG");
+        plot[1].setTitle("mean ERG");
+        plot[1].setXLabel("time [s]");
+        setWidget(&plot);
     }
 
     int simpleErg::main(void) {
-        // get options -------------------------------------------------------------
+        // get options ---------------------------------------------------------
         const int repeats = int(number("Repeats"));
         const int current = int(number("Current"));
         const int pwm = int(number("PWM"));
         const int led = int(number("LED"));
         const int duration = int(number("Duration"));
-        P[0].clear();
-        P[1].clear();
+        plot[0].clear();
+        plot[1].clear();
         tracePlotContinuous(10);
 
-        // initialize hardware -----------------------------------------------------
+        // initialize hardware -------------------------------------------------
         LEDArray *larray;
         larray = dynamic_cast<LEDArray *> (device("led-1"));
         printf("LEDArray open: %i\n", larray->isOpen());
@@ -94,41 +92,40 @@ namespace erg {
             SampleDataF data(0.0, duration, InTrace.stepsize());
             InTrace.copy(trigger_begin.back(counter), data);
             ergVector.push_back(data);
-            P.lock();
+            plot.lock();
             //P.clear();
-            P[0].plot(data, 1.0, Plot::Orange, 2, Plot::Solid);
-            P[0].draw();
-            P.unlock();
+            plot[0].plot(data, 1.0, Plot::Orange, 2, Plot::Solid);
+            plot[0].draw();
+            plot.unlock();
         }
 
         //plot mean erg-------------------------------------------------------------
         SampleDataF meanerg(0.0, duration, InTrace.stepsize());
         average(meanerg, ergVector);
-        P.lock();
-        P[1].plot(meanerg, 1.0, Plot::Orange, 2, Plot::Solid);
-        P[1].draw();
-        P.unlock();
+        plot.lock();
+        plot[1].plot(meanerg, 1.0, Plot::Orange, 2, Plot::Solid);
+        plot[1].draw();
+        plot.unlock();
 
         //save data ----------------------------------------------------------------
-        ofstream df(addPath(text("filename")).c_str(),
+        ofstream ergFile(addPath(text("Filename")).c_str(),
                     ofstream::out | ofstream::app);
-        //ofstream df("/home/erg/test.dat", ofstream::out | ofstream::app);
-        df << '\n';
+        ergFile << '\n';
         TableKey datakey;
         datakey.addNumber("ERG", "mv", "%6.3f");
         datakey.addNumber("Trigger", "v", "%6.3f");
-        datakey.saveKey(df);
+        datakey.saveKey(ergFile);
         for (int i = startIndex; i < endIndex; i++) {
-            datakey.save(df, InTrace.at(i), 0);
-            datakey.save(df, TriggerTrace.at(i), 1);
-            df << '\n';
+            datakey.save(ergFile, InTrace.at(i), 0);
+            datakey.save(ergFile, TriggerTrace.at(i), 1);
+            ergFile << '\n';
         }
-        df << "\n";
+        ergFile << "\n";
         return Completed;
     }
 
-    addRePro(simpleErg, erg);
+    addRePro(simpleErg, intererg);
 
-}; /* namespace erg */
+}; /* namespace intererg */
 
 #include "moc_simpleerg.cc"

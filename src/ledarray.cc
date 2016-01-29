@@ -21,12 +21,12 @@
 
 #include <sstream>
 #include <relacs/relacsplugin.h>
-#include <relacs/erg/ledarray.h>
+#include <relacs/intererg/ledarray.h>
 
 using namespace relacs;
 using namespace LibSerial;
 
-namespace erg {
+namespace intererg {
     static SerialStream my_serial_stream;
 
     LEDArray::LEDArray(void)
@@ -139,6 +139,6 @@ namespace erg {
         return 1;
     }
 
-    addDevice(LEDArray, erg);
+    addDevice(LEDArray, intererg);
 
-}; /* namespace erg */
+}; /* namespace intererg */
