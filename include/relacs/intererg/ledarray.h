@@ -109,6 +109,15 @@ namespace intererg {
                             const int &ontime1, const int &ontime2,
                             const int &offtime1, const int &offtime2);
 
+        /*
+         * Set all the parameter of one led (stop it if running)
+         * The second one is muted.
+         * led: Index of the leds
+         * pwm: Pulsedwidth Modulation of the leds (0-4095)
+         * current: Current for the leds (0-4096)
+         * ontime: Times the the leds should be on (ms)
+         * offtime: Times that the leds should be off (ms)
+         */
         int setOneLEDParameter(const int &led, const int &pwm,
                                const int &current, const int &ontime,
                                const int &offtime);

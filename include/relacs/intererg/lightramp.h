@@ -32,14 +32,12 @@ using namespace relacs;
 namespace intererg {
 
 
-/*!
-\class LightRamp
-\brief [RePro] Measured ERG amplitude for increasing light levels
-\author Christian Garbers
-\version 1.0 (Jan 23, 2012)
-*/
-
-
+    /*!
+    \class LightRamp
+    \brief [RePro] Measured ERG amplitude for increasing light levels
+    \author Christian Garbers
+    \version 1.0 (Jan 23, 2012)
+    */
     class LightRamp : public RePro {
         Q_OBJECT
 
@@ -49,10 +47,8 @@ namespace intererg {
 
         virtual int main(void);
 
-        vector<double> erg_amplitudes;
-        vector<double> pwms;
     protected:
-        MultiPlot P;
+        MultiPlot plots;
 
     };
 

@@ -1,5 +1,5 @@
 /*
-  erg/lightramp.cc
+  intererg/lightramp.cc
   Measured ERG amplitude for increasing light levels
 
   RELACS - Relaxed ELectrophysiological data Acquisition, Control, and Stimulation
@@ -55,127 +55,110 @@ namespace intererg {
                   4095.0, 1.0, "ms", "ms");
         addNumber("InitPWM", "PWM while waiting", 4000.0, 1.0, 4095.0, 1.0,
                   "ms", "ms");
-        addText("filename.dat");
+        addText("filename");
         addNumber("Before", "MS for the Baseline", 100.0, 1.0, 1000.0,
                   1.0, "ms", "ms");
         addNumber("After", "MS for the Signal", 100.0, 1.0, 1000.0,
                   1.0, "ms", "ms");
 
-        P.lock();
-        P.resize(2, 1, true);
-        P.unlock();
-        P[0].setTitle("ERG");
-        P[1].setXLabel("PWM [BIT]");
-        P[1].setYLabel("ERG Amplitude [mv]");
-        P[0].setXLabel("time [ms]");
-        P[0].setYLabel("ERG Amplitude [mv]");
-        setWidget(&P);
+        plots.lock();
+        plots.resize(2, 1, true);
+        plots.unlock();
+        plots[0].setTitle("ERG");
+        plots[1].setXLabel("PWM [BIT]");
+        plots[1].setYLabel("ERG Amplitude [mv]");
+        plots[0].setXLabel("time [ms]");
+        plots[0].setYLabel("ERG Amplitude [mv]");
+        setWidget(&plots);
     }
 
 
     int LightRamp::main(void) {
         LEDArray *larray;
         larray = dynamic_cast< LEDArray * >( device("led-1"));
-        int repeats = int(number("Repeats"));
-        int led = int(number("LED"));
-        int current = int(number("Current"));
-        double on_duration = number("OnDuration");
-        double off_duration = number("OffDuration");
-        int start_pwm = int(number("StartPWM"));
-        int stop_pwm = int(number("StopPWM"));
-        int incr_pwm = int(number("IncrPWM"));
-        double initial_wait = number("InitialWait");
-        int initial_pwm = int(number("InitPWM"));
-        double before = number("Before");
-        double after = number("After");
+        const int repeats = int(number("Repeats"));
+        const int led = int(number("LED"));
+        const int current = int(number("Current"));
+        const double on_duration = number("OnDuration");
+        const double off_duration = number("OffDuration");
+        const int start_pwm = int(number("StartPWM"));
+        const int stop_pwm = int(number("StopPWM"));
+        const int incr_pwm = int(number("IncrPWM"));
+        const double initial_wait = number("InitialWait");
+        const int initial_pwm = int(number("InitPWM"));
+        const double before = number("Before");
+        const double after = number("After");
         const InData &InTrace = trace("V-1");
         const EventData &trigger_begin = events("Trigger-1");
         const EventData &trigger_end = events("Trigger-2");
 
+        larray->setOneLEDParameter(led, initial_pwm, current, on_duration,
+                                   initial_wait);
+        larray->start(1);
+        sleep((initial_wait + on_duration) / 1000);
 
-        char command[100];
-        sprintf(command, "%.4i%.4i%.2i", initial_pwm, 4000, led);
-        larray->sendCommand(command);
-        sleep(initial_wait / 1000);
-        larray->sendCommand("0000000000");
+        plots.lock();
+        plots[0].clear();
+        plots.unlock();
+        plots[0].clear();
+        plots[1].clear();
 
-        P.lock();
-        P[0].clear();
-        P.unlock();
-        P[0].clear();
-        P[1].clear();
-        //Measurement  ---------------------------------------------------------------
-        int pwm;
-        for (pwm = start_pwm; pwm <= stop_pwm; pwm += incr_pwm) {
+        //Measurement  ---------------------------------------------------------
+        int indexBefore, indexAfter;
+        vector<double> erg_amplitudes;
+        vector<double> pwms;
+        ofstream resultFile(text("filename"), ofstream::out | ofstream::app);
+        for (int pwm = start_pwm; pwm <= stop_pwm; pwm += incr_pwm) {
             double amplitude = 0.0;
-            int index1 = trace("V-1").currentIndex();
+            indexBefore = trace("V-1").currentIndex();
             for (int counter = 0; counter < repeats; counter++) {
-                char command[100];
-                sprintf(command, "%.4i%.4i%.2i", pwm, current, led);
-                larray->sendCommand(command);
-                sleep(on_duration / 1000);
-                larray->sendCommand("0000000000");
-                sleep(off_duration / 1000);
+                larray->setOneLEDParameter(led, pwm, current, on_duration,
+                                           off_duration);
+                larray->start(1);
+                sleep((on_duration + off_duration) / 1000);
                 amplitude += InTrace.mean(trigger_begin.back(),
                                           trigger_begin.back() +
                                           before / 1000.0) -
                              InTrace.mean(trigger_end.back() - after / 1000.0,
                                           trigger_end.back());
-                //plotting ---------------------------------------------------------
-//			double current_time = trace("V-1").currentTime() ;
-//			SampleDataF data(0.0, current_time - trigger.back(),
-//							trace("V-1").stepsize());
-//			trace("V-1").copy(trigger.back(), data);
-//		    P.lock();
-//			P[0].plot(data, 1.0, Plot::Orange, 2, Plot::Solid);
-//			P[0].draw() ;
-//			P.unlock() ;
             }
-            int index2 = trace("V-1").currentIndex();
+            indexAfter = trace("V-1").currentIndex();
             erg_amplitudes.push_back(amplitude / repeats);
             pwms.push_back(pwm);
-            cout << "pwm:" << pwm << endl;
-            cout << "amplitude:" << amplitude / repeats << endl << endl;
-            string basename = text("filename.dat");
-            char filename[100];
-            sprintf(filename, "pwm%i%s", pwm, basename.c_str());
-            ofstream df(filename, ofstream::out | ofstream::app);
             TableKey datakey;
             datakey.addNumber("ERG", "mv", "%6.3f");
             datakey.addNumber("Trigger", "v", "%6.3f");
-            datakey.saveKey(df);
-            for (int index = index1; index < index2; index++) {
-                datakey.save(df, trace("V-1").at(index), 0);
-                datakey.save(df, trace("StimulusTrigger").at(index), 1);
-                df << "\n";
+            datakey.saveKey(resultFile);
+            for (int index = indexBefore; index < indexAfter; index++) {
+                datakey.save(resultFile, trace("V-1").at(index), 0);
+                datakey.save(resultFile, trace("StimulusTrigger").at(index), 1);
+                resultFile << "\n";
             }
-            df.close();
+            resultFile.close();
         }
-        larray->sendCommand("0000000000");
 
-        // plot results --------------------------------------------------------------
+        // plot results --------------------------------------------------------
         Plot::PointStyle p_style(Plot::Circle, 10, Plot::Red);
         Plot::LineStyle l_style(Plot::Blue, 1);
-        P.lock();
-        P[1].plot(pwms, erg_amplitudes, l_style, p_style);
-        P[1].draw();
-        P.unlock();
+        plots.lock();
+        plots[1].plot(pwms, erg_amplitudes, l_style, p_style);
+        plots[1].draw();
+        plots.unlock();
 
-        // save data -----------------------------------------------------------------
-        ofstream df(text("filename.dat").c_str(),
-                    ofstream::out | ofstream::app);
+        // save data -----------------------------------------------------------
         TableKey datakey;
         datakey.addNumber("PWM", "bit", "%6.3f");
         datakey.addNumber("ERG Amplitude", "mv", "%6.5f");
-        datakey.saveKey(df);
+        datakey.saveKey(resultFile);
         vector<double>::iterator it2 = erg_amplitudes.begin();
         for (vector<double>::iterator it = pwms.begin();
              it != pwms.end(); ++it) {
-            datakey.save(df, *it, 0);
-            datakey.save(df, *it2, 1);
+            datakey.save(resultFile, *it, 0);
+            datakey.save(resultFile, *it2, 1);
             ++it2;
-            df << "\n";
+            resultFile << "\n";
         }
+        resultFile.close();
         return Completed;
     }
 

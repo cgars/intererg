@@ -51,13 +51,12 @@ namespace intererg {
                   1.0, "ms", "ms");
         addNumber("InitialWait", "Time to wait before measurement", 4000.0, 1.0,
                   4095.0, 1.0, "ms", "ms");
-        addText("filename.dat");
+        addText("filename");
     }
 
 
     int OffRamp::main(void) {
-        LEDArray *larray;
-        larray = dynamic_cast< LEDArray * >( device("led-1"));
+        LEDArray *larray = dynamic_cast< LEDArray * >( device("led-1"));
         const int repeats = int(number("Repeats"));
         const int led = int(number("LED"));
         const int current = int(number("Current"));
@@ -74,33 +73,32 @@ namespace intererg {
         larray->start(1);
         sleep((initial_wait + on_duration) / 1000);
 
-        //Measurement  ---------------------------------------------------------------
+
+        int indexBefore, indexAfter;
+        //Measurement  ---------------------------------------------------------
         for (double off_duration = start_dur;
              off_duration < stop_dur; off_duration += incr_dur) {
             int counter;
-            int index1 = trace("V-1").currentIndex();
+            int indexBefore = trace("V-1").currentIndex();
             for (counter = 1; counter < repeats; counter++) {
                 larray->setOneLEDParameter(led, pwm, current, on_duration,
                                            off_duration);
+                larray->start(1);
                 sleep((on_duration + off_duration) / 1000.0);
             }
-            int index2 = trace("V-1").currentIndex();
-            string basename = text("filename.dat");
-            char filename[100];
-            sprintf(filename, "off_dur%i%s", int(off_duration),
-                    basename.c_str());
-            ofstream df(filename, ofstream::out | ofstream::app);
+            indexAfter = trace("V-1").currentIndex();
+            ofstream resultFile(text("filename"),
+                                ofstream::out | ofstream::app);
             TableKey datakey;
             datakey.addNumber("ERG", "mv", "%6.3f");
             datakey.addNumber("Trigger", "v", "%6.3f");
-            datakey.saveKey(df);
-            for (int index = index1; index < index2; index++) {
-                datakey.save(df, trace("V-1").at(index), 0);
-                datakey.save(df, trace("StimulusTrigger").at(index), 1);
-                df << "\n";
+            datakey.saveKey(resultFile);
+            for (int index = indexBefore; index < indexAfter; index++) {
+                datakey.save(resultFile, trace("V-1").at(index), 0);
+                datakey.save(resultFile, trace("StimulusTrigger").at(index), 1);
+                resultFile << "\n";
             }
-            df.close();
-            cout << off_duration << endl;
+            resultFile.close();
         }
         return Completed;
     }
