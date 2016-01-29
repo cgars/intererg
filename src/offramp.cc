@@ -58,22 +58,21 @@ namespace intererg {
     int OffRamp::main(void) {
         LEDArray *larray;
         larray = dynamic_cast< LEDArray * >( device("led-1"));
-        int repeats = int(number("Repeats"));
-        int led = int(number("LED"));
-        int current = int(number("Current"));
-        int pwm = int(number("PWM"));
-        double on_duration = number("OnDuration");
-        double start_dur = number("StartDur");
-        double stop_dur = number("StopDur");
-        double incr_dur = number("IncrDur");
-        double initial_wait = number("InitialWait");
+        const int repeats = int(number("Repeats"));
+        const int led = int(number("LED"));
+        const int current = int(number("Current"));
+        const int pwm = int(number("PWM"));
+        const double on_duration = number("OnDuration");
+        const double start_dur = number("StartDur");
+        const double stop_dur = number("StopDur");
+        const double incr_dur = number("IncrDur");
+        const double initial_wait = number("InitialWait");
         const EventData &trigger = events("Trigger-1");
 
-        char command[100];
-        sprintf(command, "%.4i%.4i%.2i", 4000, 4000, led);
-        larray->sendCommand(command);
-        sleep(initial_wait / 1000);
-        larray->sendCommand("0000000000");
+        larray->setOneLEDParameter(led, pwm, current, on_duration,
+                                   initial_wait);
+        larray->start(1);
+        sleep((initial_wait + on_duration) / 1000);
 
         //Measurement  ---------------------------------------------------------------
         for (double off_duration = start_dur;
@@ -81,12 +80,9 @@ namespace intererg {
             int counter;
             int index1 = trace("V-1").currentIndex();
             for (counter = 1; counter < repeats; counter++) {
-                char command[100];
-                sprintf(command, "%.4i%.4i%.2i", pwm, current, led);
-                larray->sendCommand(command);
-                sleep(on_duration / 1000.0);
-                larray->sendCommand("0000000000");
-                sleep(off_duration / 1000.0);
+                larray->setOneLEDParameter(led, pwm, current, on_duration,
+                                           off_duration);
+                sleep((on_duration + off_duration) / 1000.0);
             }
             int index2 = trace("V-1").currentIndex();
             string basename = text("filename.dat");
@@ -106,7 +102,6 @@ namespace intererg {
             df.close();
             cout << off_duration << endl;
         }
-        larray->sendCommand("0000000000");
         return Completed;
     }
 

@@ -27,22 +27,21 @@ using namespace relacs;
 using namespace LibSerial;
 
 namespace intererg {
-    static SerialStream my_serial_stream;
 
     LEDArray::LEDArray(void)
             : Device("LEDArray") {
     }
 
     LEDArray::~LEDArray(void) {
-        my_serial_stream.Close();
+        serialStream.Close();
     }
 
     int LEDArray::open(const string &device, const Options &opts) {
-        my_serial_stream.Open(device);
-        my_serial_stream.SetBaudRate(SerialStreamBuf::BAUD_38400);
-        my_serial_stream.SetCharSize(SerialStreamBuf::CHAR_SIZE_8);
-        my_serial_stream.SetNumOfStopBits(1);
-        my_serial_stream.SetParity(SerialStreamBuf::PARITY_NONE);
+        serialStream.Open(device);
+        serialStream.SetBaudRate(SerialStreamBuf::BAUD_38400);
+        serialStream.SetCharSize(SerialStreamBuf::CHAR_SIZE_8);
+        serialStream.SetNumOfStopBits(1);
+        serialStream.SetParity(SerialStreamBuf::PARITY_NONE);
         setDeviceFile(device);
         setDeviceType(MiscellaneousType);
         setDeviceClass("LEDArray");
@@ -53,11 +52,11 @@ namespace intererg {
 
 
     int LEDArray::open(Device &device, const Options &opts) {
-        my_serial_stream.Open(device.deviceIdent());
-        my_serial_stream.SetBaudRate(SerialStreamBuf::BAUD_38400);
-        my_serial_stream.SetCharSize(SerialStreamBuf::CHAR_SIZE_8);
-        my_serial_stream.SetNumOfStopBits(1);
-        my_serial_stream.SetParity(SerialStreamBuf::PARITY_NONE);
+        serialStream.Open(device.deviceIdent());
+        serialStream.SetBaudRate(SerialStreamBuf::BAUD_38400);
+        serialStream.SetCharSize(SerialStreamBuf::CHAR_SIZE_8);
+        serialStream.SetNumOfStopBits(1);
+        serialStream.SetParity(SerialStreamBuf::PARITY_NONE);
         setDeviceFile(device.deviceIdent());
         setDeviceType(MiscellaneousType);
         setDeviceClass("LEDArray");
@@ -67,11 +66,11 @@ namespace intererg {
     }
 
     int LEDArray::open(const string &device) {
-        my_serial_stream.Open(device);
-        my_serial_stream.SetBaudRate(SerialStreamBuf::BAUD_38400);
-        my_serial_stream.SetCharSize(SerialStreamBuf::CHAR_SIZE_8);
-        my_serial_stream.SetNumOfStopBits(1);
-        my_serial_stream.SetParity(SerialStreamBuf::PARITY_NONE);
+        serialStream.Open(device);
+        serialStream.SetBaudRate(SerialStreamBuf::BAUD_38400);
+        serialStream.SetCharSize(SerialStreamBuf::CHAR_SIZE_8);
+        serialStream.SetNumOfStopBits(1);
+        serialStream.SetParity(SerialStreamBuf::PARITY_NONE);
         setDeviceFile(device);
         setDeviceType(MiscellaneousType);
         setDeviceClass("LEDArray");
@@ -81,7 +80,7 @@ namespace intererg {
     }
 
     void LEDArray::close(void) {
-        my_serial_stream.Close();
+        serialStream.Close();
     }
 
     int LEDArray::sendCommand(const char &key, const int &value) {
@@ -89,18 +88,25 @@ namespace intererg {
         char command[8];
         sprintf(command, "1%c%05i\r", key, value);
         printf("command is: %s\n", command);
-        my_serial_stream << command;
+        serialStream << command;
         printf("i have send it\n");
         char return_value[5];
         printf("waiting for reply\n");
-        my_serial_stream.read(return_value, 1);
+        serialStream.read(return_value, 1);
         printf("got a reply t is:%c\n", return_value);
         return 1;
+    }
 
+    int LEDArray::setOneLEDParameter(const int &led, const int &pwm,
+                                     const int &current, const int &ontime,
+                                     const int &offtime) {
+        LEDArray::setLEDParameter(led, OFFLED, pwm, 0, current, 0, ontime, 0,
+                                  offtime, 0);
+        return 1;
     }
 
     bool LEDArray::isOpen(void) const {
-        bool r = my_serial_stream.IsOpen();
+        bool r = serialStream.IsOpen();
         cerr << "ISOPEN? " << r << '\n';
         return r;
     }
@@ -132,10 +138,6 @@ namespace intererg {
         sendCommand('m', 0);
         sendCommand('k', cycles);
         sendCommand('l', 1);
-        return 1;
-    }
-
-    int LEDArray::sendCommand(const string &command) {
         return 1;
     }
 
