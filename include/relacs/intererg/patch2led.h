@@ -50,47 +50,72 @@ namespace intererg {
         virtual int main(void);
 
         /*
-         * recursivly determine and return the PWM in range 0-4000 that results in an
-         * an minimal erg amplitude deffirence between the Amplitude measured at pwm
-         * and desired
-        */
+         * Dynamically change the pwm1 value such that arg signal difference
+         * defined in the getSignal member is minimized.
+         *
+         * pwm1,pwm2: the two last pwms tested
+         * potential1,potential2: there respective erg amplitudes
+         * InTrace: The erg trace
+         * triggerBegin,triggerEnd: Traces of the triggers
+         * *larray: the Led Array
+         * getSignal: Member of Patch2Led used to define the signal and convergence
+         * criteria (either &getErgDiff, or &getErgVar )
+         *
+         */
+        int getPwmDynamic(int pwm1,
+                          std::pair<double, bool> &potential1,
+                          int pwm2, std::pair<double, bool> &potential2,
+                          LEDArray *larray,
+                          const InData &InTrace,
+                          const EventData &triggerBegin,
+                          const EventData &triggerEnd,
+                          const double baseVariance,
+                          std::pair<double, bool> (Patch2LED::*getSignal)
+                                  (int, LEDArray *, const InData &,
+                                   const EventData &, const EventData &,
+                                   const double &));
 
-        int get_pwm_dynamic(int pwm_m_1,
-                            std::pair<double, double> potential_m_1,
-                            int pwm_m_2, std::pair<double, double> potential_m2,
-                            LEDArray *larray,
-                            const InData &InTrace,
-                            const EventData &trigger_begin,
-                            const EventData &trigger_end);
+        /*
+         * Measure the difference in Erg amplitude for the value pwm2 and
+         * the pwm reference  value defined in the RePro Gui. The erg amplitude
+         * is taken as the difference between the mean value in a time interval
+         * (defined in the gui) before the on_triggers and the mean value in an
+         * interval after the end off the on triggers
+         * Return a pair of (difference,  should stop)
+         */
+        std::pair<double, bool> getErgDiff(int pwm2, LEDArray *larray,
+                                           const InData &InTrace,
+                                           const EventData &triggerBegin,
+                                           const EventData &triggerEnd,
+                                           const double &baseVariance);
 
-        int get_pwm_dynamic_var(int pwm_m_1, double variance_m_1,
-                                int pwm_m_2, double variance_m_2,
-                                LEDArray *larray,
-                                const InData &InTrace,
-                                const EventData &trigger_begin,
-                                const EventData &trigger_end,
-                                double base_variance);
+        /*
+         * Measure the difference in Erg amplitude for the value pwm2 and
+         * the pwm reference  value defined in the RePro Gui. The erg amplitude
+         * is taken as the variance of the signal during the measurement
+         */
+        std::pair<double, bool> getErgVar(int pwm2, LEDArray *larray,
+                                          const InData &InTrace,
+                                          const EventData &trigger_begin,
+                                          const EventData &trigger_end,
+                                          const double &baseVariance);
 
-        std::pair<double, double> get_erg_diff(int pwm2, LEDArray *larray,
-                                               const InData &InTrace,
-                                               const EventData &trigger_begin,
-                                               const EventData &trigger_end);
-
-        double get_erg_var(int pwm2, LEDArray *larray, const InData &InTrace,
-                           const EventData &trigger_begin,
-                           const EventData &trigger_end);
-
-        int get_intercept(int pwm_m_1, double potential_m_1,
-                          int pwm_m_2, double potential_m_2);
+        /*
+         * Estimate the pwm value for which the potential (erg signals) would be
+         * equal assuming linear interpolation
+         */
+        int getEqualPotentialPwm(int pwm1, double potential1,
+                                 int pwm2, double potential2);
 
 
-        vector<double> erg_amplitudes;
+        vector<double> ergAmplitudes;
         vector<double> pwms;
-        vector<double> amp_desired;
-        vector<double> amp_measured;
-        int default_guess;
+        vector<double> ampDesired;
+        vector<double> ampMeasured;
+        int defaultGuess;
+
     protected:
-        MultiPlot P;
+        MultiPlot plots;
     };
 
 

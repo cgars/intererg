@@ -28,12 +28,14 @@ using namespace LibSerial;
 
 namespace intererg {
 
+    static SerialStream SerialStream;
+
     LEDArray::LEDArray(void)
             : Device("LEDArray") {
     }
 
     LEDArray::~LEDArray(void) {
-        serialStream.Close();
+        SerialStream.Close();
     }
 
     int LEDArray::open(const string &device, const Options &opts) {
@@ -45,11 +47,11 @@ namespace intererg {
     }
 
     int LEDArray::open(const string &device) {
-        serialStream.Open(device);
-        serialStream.SetBaudRate(SerialStreamBuf::BAUD_38400);
-        serialStream.SetCharSize(SerialStreamBuf::CHAR_SIZE_8);
-        serialStream.SetNumOfStopBits(1);
-        serialStream.SetParity(SerialStreamBuf::PARITY_NONE);
+        SerialStream.Open(device);
+        SerialStream.SetBaudRate(SerialStreamBuf::BAUD_38400);
+        SerialStream.SetCharSize(SerialStreamBuf::CHAR_SIZE_8);
+        SerialStream.SetNumOfStopBits(1);
+        SerialStream.SetParity(SerialStreamBuf::PARITY_NONE);
         setDeviceFile(device);
         setDeviceType(MiscellaneousType);
         setDeviceClass("LEDArray");
@@ -59,29 +61,29 @@ namespace intererg {
     }
 
     void LEDArray::close(void) {
-        serialStream.Close();
+        SerialStream.Close();
     }
 
     int LEDArray::sendCommand(const char &key, const int &value) {
         char next_byte[8];
         char command[8];
         sprintf(command, "1%c%05i\r", key, value);
-        serialStream << command;
+        SerialStream << command;
         char return_value[5];
-        serialStream.read(return_value, 1);
+        SerialStream.read(return_value, 1);
         return 1;
     }
 
     int LEDArray::setOneLEDParameter(const int &led, const int &pwm,
                                      const int &current, const int &ontime,
                                      const int &offtime) {
-        LEDArray::setLEDParameter(led, OFFLED, pwm, 0, current, 0, ontime, 0,
+        LEDArray::setLEDParameter(led, 0, pwm, 0, current, 0, ontime, 0,
                                   offtime, 0);
         return 1;
     }
 
     bool LEDArray::isOpen(void) const {
-        bool r = serialStream.IsOpen();
+        bool r = SerialStream.IsOpen();
         cerr << "ISOPEN? " << r << '\n';
         return r;
     }

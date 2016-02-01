@@ -47,7 +47,6 @@ namespace intererg {
     class LEDArray : public Device {
 
     public:
-        const static int OFFLED = 0;
 
         /*! Construct a Device of type \a type.
             \sa setDeviceType() */
@@ -118,8 +117,6 @@ namespace intererg {
          */
         int start(const int &cycles);
 
-    private:
-        static SerialStream serialStream;
 
     };
 }; /* namespace intererg */

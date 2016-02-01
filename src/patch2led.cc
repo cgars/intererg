@@ -30,8 +30,6 @@ namespace intererg {
     Patch2LED::Patch2LED(void)
             : RePro("Patch2LED", "erg", "Christian Garbers", "1.0",
                     "Jan 19, 2012") {
-// add some options:
-//  addNumber( "duration", "Stimulus duration", 1.0, 0.001, 100000.0, 0.001, "s", "ms" );
         addNumber("Repeats", "Nr of ERG to measure", 5.0, 1.0, 1000.0, 1.0,
                   "times",
                   "times");
@@ -64,15 +62,15 @@ namespace intererg {
                   0.001, "ms", "ms");
         addSelection("SigType", "Signal Type ",
                      "diff|var");
-        addText("filename.dat");
+        addText("filename");
 
-        P.lock();
-        P.resize(2, 1, true);
-        P.unlock();
-        P[0].setTitle("ERG");
-        P[0].setXLabel("PWM [BIT]");
-        P[0].setYLabel("ERG Amplitude [mv]");
-        setWidget(&P);
+        plots.lock();
+        plots.resize(2, 1, true);
+        plots.unlock();
+        plots[0].setTitle("ERG");
+        plots[0].setXLabel("PWM [BIT]");
+        plots[0].setYLabel("ERG Amplitude [mv]");
+        setWidget(&plots);
     }
 
 
@@ -81,369 +79,274 @@ namespace intererg {
         larray = dynamic_cast< LEDArray * >( device("led-1"));
         int result = 0;
         const InData &InTrace = trace("V-1");
-        const EventData &trigger_begin = events("Trigger-1");
-        const EventData &trigger_end = events("Trigger-2");
-        int led1 = int(number("LED1"));
+        const EventData &triggerBegin = events("Trigger-1");
+        const EventData &triggerEnd = events("Trigger-2");
+        const int led1 = int(number("LED1"));
         int pwm1 = int(number("PWM1"));
-        double on_duration = number("OnDuration");
-        double off_duration = number("OffDuration");
-        default_guess = 10;
-        P[0].clear();
-        P[1].clear();
+        const double onDuration = number("OnDuration");
+        const double offDuration = number("OffDuration");
+        defaultGuess = 10;
+        plots[0].clear();
+        plots[1].clear();
         tracePlotContinuous(10);
 
         if (index("SigType") == 0) {
-            std::pair<double, double> potential_m_1 = get_erg_diff(4000, larray,
-                                                                   InTrace,
-                                                                   trigger_begin,
-                                                                   trigger_end);
-            std::pair<double, double> potential_m_2 = get_erg_diff(1, larray,
-                                                                   InTrace,
-                                                                   trigger_begin,
-                                                                   trigger_end);
-            result = get_pwm_dynamic(4000, potential_m_1, 1, potential_m_2,
-                                     larray, InTrace, trigger_begin,
-                                     trigger_end);
+            std::pair<double, bool> potentialM1 = getErgDiff(4000, larray,
+                                                             InTrace,
+                                                             triggerBegin,
+                                                             triggerEnd, 0);
+            std::pair<double, bool> potentialM2 = getErgDiff(1, larray,
+                                                             InTrace,
+                                                             triggerBegin,
+                                                             triggerEnd, 0);
+            result = getPwmDynamic(4000, potentialM1, 1., potentialM2,
+                                   larray, InTrace, triggerBegin,
+                                   triggerEnd, 0, &Patch2LED::getErgDiff);
         }
         if (index("SigType") == 1) {
-            int begin = InTrace.currentIndex();
-            sleep((on_duration + off_duration) / 1000.0);
-            int end = InTrace.currentIndex();
-            double base_variance = InTrace.variance(begin, end);
-            double variance_m_1 = get_erg_var(4000, larray, InTrace,
-                                              trigger_begin, trigger_end);
-            double variance_m_2 = get_erg_var(1, larray, InTrace,
-                                              trigger_begin, trigger_end);
-            result = get_pwm_dynamic_var(4000, variance_m_1, 1, variance_m_2,
-                                         larray, InTrace, trigger_begin,
-                                         trigger_end,
-                                         base_variance);
+            const int begin = InTrace.currentIndex();
+            sleep((onDuration + offDuration) / 1000.0);
+            const int end = InTrace.currentIndex();
+            double baseVariance = InTrace.variance(begin, end);
+            std::pair<double, bool> varianceM1 = getErgVar(4000, larray,
+                                                           InTrace,
+                                                           triggerBegin,
+                                                           triggerEnd,
+                                                           baseVariance);
+            std::pair<double, bool> varianceM2 = getErgVar(1, larray, InTrace,
+                                                           triggerBegin,
+                                                           triggerEnd,
+                                                           baseVariance);
+            result = getPwmDynamic(4000, varianceM1, 1, varianceM2,
+                                   larray, InTrace, triggerBegin,
+                                   triggerEnd,
+                                   baseVariance, &Patch2LED::getErgVar);
         }
-        cout << "i know its is:" << result << endl;
 
         // plot results --------------------------------------------------------------
         Plot::PointStyle p_style(Plot::Circle, 10, Plot::Red);
         Plot::LineStyle l_style(Plot::Transparent, 1);
-        P.lock();
-        P[0].plot(pwms, erg_amplitudes, l_style, p_style);
-        P[0].draw();
-        P.unlock();
+        plots.lock();
+        plots[0].plot(pwms, ergAmplitudes, l_style, p_style);
+        plots[0].draw();
+        plots.unlock();
 
-        // saving pwm table ----------------------------------------------------------
-        char result_file_name[100];
-        sprintf(result_file_name, "pwm_steps_%s", text("filename.dat").c_str());
-        ofstream df(addPath(result_file_name).c_str(),
+        // saving pwm table ----------------------------------------------------
+        char resultFileName[100];
+        sprintf(resultFileName, "pwm_steps_%s", text("filename").c_str());
+        ofstream resultFile(addPath(resultFileName).c_str(),
                     ofstream::out | ofstream::app);
         TableKey datakey;
         datakey.addNumber("PWM", "bit", "%6.3f");
         datakey.addNumber("ERG Amplitude", "mv", "%6.3f");
         datakey.addNumber("Reference ERG Amplitude", "mv", "%6.3f");
         datakey.addNumber("Measured ERG Amplitude", "mv", "%6.3f");
-        datakey.saveKey(df);
-        vector<double>::iterator it2 = erg_amplitudes.begin();
-        vector<double>::iterator it3 = amp_desired.begin();
-        vector<double>::iterator it4 = amp_measured.begin();
+        datakey.saveKey(resultFile);
+        vector<double>::iterator it2 = ergAmplitudes.begin();
+        vector<double>::iterator it3 = ampDesired.begin();
+        vector<double>::iterator it4 = ampMeasured.begin();
         for (vector<double>::iterator it = pwms.begin();
              it != pwms.end(); ++it) {
-            datakey.save(df, *it, 0);
-            datakey.save(df, *it2, 1);
-            datakey.save(df, *it3, 2);
-            datakey.save(df, *it4, 3);
+            datakey.save(resultFile, *it, 0);
+            datakey.save(resultFile, *it2, 1);
+            datakey.save(resultFile, *it3, 2);
+            datakey.save(resultFile, *it4, 3);
             ++it2;
             ++it3;
             ++it4;
-            df << "\n";
+            resultFile << "\n";
         }
-        df << endl;
-        df.close();
-        erg_amplitudes.clear();
-        amp_desired.clear();
-        amp_measured.clear();
+        resultFile << endl;
+        resultFile.close();
+        ergAmplitudes.clear();
+        ampDesired.clear();
+        ampMeasured.clear();
         pwms.clear();
 
-
-//	// saving raw ERGS -----------------------------------------------------------
-//	char erg_file_name [100] ;
-//	sprintf(erg_file_name, "ergs_%s", text("filename.dat").c_str()) ;
-//  ofstream df1(addPath(erg_file_name).c_str(), ofstream::out | ofstream::app);
-//	TableKey datakey1;
-//	datakey1.addNumber("ERG", "mv", "%6.3f");
-//	datakey1.addNumber("Stimulus", "v", "%6.3f");
-//	datakey1.saveKey(df1);
-//	for (int i=index_begin;i<index_end;i++)
-//	{
-//		datakey1.save(df1, InTrace.at(i), 0);
-//		datakey1.save(df1, TriggerTrace.at(i), 1);
-//		df1<<endl;
-//	}
-//	df1<<endl ;
-//	df1.close() ;
-
-        // saving result -------------------------------------------------------------
-        ofstream df2(addPath("results.dat").c_str(),
+        // saving result Summary -----------------------------------------------
+        ofstream resultSummaryFile(addPath("results").c_str(),
                      ofstream::out | ofstream::app);
         TableKey datakey2;
         datakey2.addNumber("Ref PWM", "bit", "%6.3f");
         datakey2.addNumber("Ref LED", "number", "%6.3f");
         datakey2.addNumber("Result", "pwm", "%6.3f");
-        datakey2.saveKey(df2);
-        datakey2.save(df2, pwm1, 0);
-        datakey2.save(df2, led1, 1);
-        datakey2.save(df2, result, 2);
-        df2 << endl;
-        df2.close();
+        datakey2.saveKey(resultSummaryFile);
+        datakey2.save(resultSummaryFile, pwm1, 0);
+        datakey2.save(resultSummaryFile, led1, 1);
+        datakey2.save(resultSummaryFile, result, 2);
+        resultSummaryFile << endl;
+        resultSummaryFile.close();
 
         return Completed;
     }
 
-    int Patch2LED::get_pwm_dynamic(int pwm_m_1,
-                                   std::pair<double, double> potential_m_1,
-                                   int pwm_m_2,
-                                   std::pair<double, double> potential_m_2,
-                                   LEDArray *larray,
-                                   const InData &InTrace,
-                                   const EventData &trigger_begin,
-                                   const EventData &trigger_end) {
-        //cout<<"comparing:"<<abs(potential_m_1)<<"and "<<abs(potential_m_2) <<endl;
-        if (abs(potential_m_1.first - potential_m_2.first) <
-            number("EThreshold") * abs(potential_m_1.second)) {
-            if (abs(potential_m_1.first) <
-                number("EThreshold2") * abs(potential_m_1.second)) {
-                return (pwm_m_1 + pwm_m_2) / 2;
-            }
-        }
-        if (pwm_m_1 == pwm_m_2) {
-            return pwm_m_1;
+    int Patch2LED::getPwmDynamic(int pwm1,
+                                 std::pair<double, bool> &potential1,
+                                 int pwm2,
+                                 std::pair<double, bool> &potential2,
+                                 LEDArray *larray,
+                                 const InData &InTrace,
+                                 const EventData &triggerBegin,
+                                 const EventData &triggerEnd,
+                                 const double baseVariance,
+                                 std::pair<double, bool> (Patch2LED::*getSignal)
+                                         (int, LEDArray *, const InData &,
+                                          const EventData &, const EventData &,
+                                          const double &)) {
+        if (potential1.second) {
+            return int(round((potential1.first + potential2.first) / 2.));
         }
         else {
-            int guess = get_intercept(pwm_m_1, potential_m_1.first, pwm_m_2,
-                                      potential_m_2.first);
-            vector<double> tmp_pwm;
-            tmp_pwm.push_back(pwm_m_1);
-            tmp_pwm.push_back(pwm_m_2);
-            vector<double> tmp_pot;
-            tmp_pot.push_back(potential_m_1.first);
-            tmp_pot.push_back(potential_m_2.first);
-            Plot::PointStyle tmpp_style(Plot::Circle, 10, Plot::Red);
-            Plot::LineStyle tmpl_style(Plot::Blue, 1);
-            P[1].clear();
-            P.lock();
-            P[1].plot(tmp_pwm, tmp_pot, tmpl_style, tmpp_style);
-            P[1].draw();
-            P.unlock();
-            tmp_pwm.clear();
-            tmp_pot.clear();
+            int pwmGuess = getEqualPotentialPwm(pwm1, potential1.first, pwm2,
+                                                potential2.first);
+            vector<double> tmpPwm;
+            tmpPwm.push_back(pwm1);
+            tmpPwm.push_back(pwm2);
+            vector<double> tmpPot;
+            tmpPot.push_back(potential1.first);
+            tmpPot.push_back(potential2.first);
+            Plot::PointStyle tmpPStyle(Plot::Circle, 10, Plot::Red);
+            Plot::LineStyle tmpLStyle(Plot::Blue, 1);
+            plots[1].clear();
+            plots.lock();
+            plots[1].plot(tmpPwm, tmpPot, tmpLStyle, tmpPStyle);
+            plots[1].draw();
+            plots.unlock();
+            tmpPwm.clear();
+            tmpPot.clear();
 
-            if (guess < 1) {
-                guess = default_guess;
-                default_guess++;
+            if (pwmGuess <
+                1) {//in guess the estimate is below 1 we need to intercept
+                pwmGuess = defaultGuess;
+                defaultGuess++;
             }
-            if (guess > 4095) {
-                guess = 4010 - default_guess;
-                default_guess++;
+            if (pwmGuess > 4095) {
+                pwmGuess = 4010 - defaultGuess;
+                defaultGuess++;
             }
-            cout << "i am guessing its:" << guess << endl << endl;
-            std::pair<double, double> guess_potential = get_erg_diff(guess,
-                                                                     larray,
-                                                                     InTrace,
-                                                                     trigger_begin,
-                                                                     trigger_end);
-            return get_pwm_dynamic(guess, guess_potential, pwm_m_1,
-                                   potential_m_1,
-                                   larray, InTrace,
-                                   trigger_begin, trigger_end);
+            std::pair<double, bool> guessPotential = (this->*getSignal)(
+                    pwmGuess, larray, InTrace, triggerBegin,
+                    triggerEnd, 0);
+            return getPwmDynamic(pwmGuess, guessPotential, pwm1, potential1,
+                                 larray, InTrace, triggerBegin, triggerEnd,
+                                 baseVariance, getSignal);
         }
     }
 
-    int Patch2LED::get_pwm_dynamic_var(int pwm_m_1, double variance_m_1,
-                                       int pwm_m_2, double variance_m_2,
-                                       LEDArray *larray,
-                                       const InData &InTrace,
-                                       const EventData &trigger_begin,
-                                       const EventData &trigger_end,
-                                       double base_variance) {
-        //cout<<"comparing:"<<abs(potential_m_1)<<"and "<<abs(potential_m_2) <<endl;
-        if ((variance_m_1 - variance_m_2) <
-            number("EThreshold") * base_variance) {
-            if (abs(variance_m_1) < number("EThreshold2") * base_variance) {
-                return (pwm_m_1 + pwm_m_2) / 2;
-            }
-        }
-        if (pwm_m_1 == pwm_m_2) {
-            return pwm_m_1;
-        }
-        else {
-            int guess = get_intercept(pwm_m_1, variance_m_1, pwm_m_2,
-                                      variance_m_2);
-            vector<double> tmp_pwm;
-            tmp_pwm.push_back(pwm_m_1);
-            tmp_pwm.push_back(pwm_m_2);
-            vector<double> tmp_pot;
-            tmp_pot.push_back(variance_m_1);
-            tmp_pot.push_back(variance_m_2);
-            Plot::PointStyle tmpp_style(Plot::Circle, 10, Plot::Red);
-            Plot::LineStyle tmpl_style(Plot::Blue, 1);
-            P[1].clear();
-            P.lock();
-            P[1].plot(tmp_pwm, tmp_pot, tmpl_style, tmpp_style);
-            P[1].draw();
-            P.unlock();
-            tmp_pwm.clear();
-            tmp_pot.clear();
-
-            if (guess < 1) {
-                guess = default_guess;
-                default_guess++;
-            }
-            if (guess > 4095) {
-                guess = 4010 - default_guess;
-                default_guess++;
-            }
-            cout << "i am guessing its:" << guess << endl << endl;
-            double guess_variance = get_erg_var(guess, larray, InTrace,
-                                                trigger_begin, trigger_end);
-            return get_pwm_dynamic_var(guess, guess_variance, pwm_m_1,
-                                       variance_m_1,
-                                       larray, InTrace, trigger_begin,
-                                       trigger_end,
-                                       base_variance);
-        }
-    }
-
-//double Patch2LED::get_erg_diff(int pwm2, LEDArray *larray, const InData &InTrace,
-//															 const EventData &trigger_begin,
-//															 const EventData &trigger_end)
-//{
-//	int led1 = int(number("LED1")) ;
-//	int pwm1 = int(number("PWM1")) ;
-//	int current1 = int(number("Current1")) ;
-//	int led2 = int(number("LED2")) ;
-//	int current2 = int(number("Current2"));
-//	int repeats = int(number( "Repeats" )) ;
-//	double on_duration = number("OnDuration") ;
-//	double off_duration = number("OffDuration") ;
-//	double before = number("Before") ;
-//	double after = number("After") ;
-//
-//	double desired = 0;
-//	double current_signal = 0;
-//	// start the flickering
-//	larray->setLEDParameter(led1,led2,pwm1,pwm2,current1,current2,
-//	on_duration, on_duration, off_duration, off_duration);
-//	larray->start(repeats+1);
-//	for(int counter=0; counter < repeats; counter++)
-//	{
-//		desired += InTrace.mean(trigger_begin.back(2*counter)- before/1000.0, trigger_begin.back(2*counter)) -
-//				InTrace.mean(trigger_begin.back(2*counter)+on_duration/1000.0-after/1000.0
-//				, trigger_begin.back(2*counter)+on_duration/1000.0) ;
-//		current_signal += InTrace.mean(trigger_begin.back(2*counter+1)- before/1000.0, trigger_begin.back(2*counter+1)) -
-//				InTrace.mean(trigger_begin.back(2*counter+1)+on_duration/1000.0-after/1000.0
-//				, trigger_begin.back(2*counter+1)+on_duration/1000.0) ;
-//	}
-//	double result = (current_signal - desired) / repeats  ;
-//	erg_amplitudes.push_back(result) ;
-//	pwms.push_back(pwm2) ;
-//	amp_desired.push_back(desired) ;
-//	amp_measured.push_back(current_signal) ;
-//	cout << "pwm:"<<pwm2<<endl;
-//	cout << "desired:"<<desired<<endl;
-//	cout << "current:"<<current_signal<<endl;
-//	cout << "diff:"<<result<<endl;
-//	return  result ;
-//}
-
-    std::pair<double, double> Patch2LED::get_erg_diff(int pwm2,
-                                                      LEDArray *larray,
-                                                      const InData &InTrace,
-                                                      const EventData &trigger_begin,
-                                                      const EventData &trigger_end) {
-        int led1 = int(number("LED1"));
-        int pwm1 = int(number("PWM1"));
-        int current1 = int(number("Current1"));
-        int led2 = int(number("LED2"));
-        int current2 = int(number("Current2"));
-        int repeats = int(number("Repeats"));
-        double on_duration = number("OnDuration");
-        double off_duration = number("OffDuration");
-        double before = number("Before");
-        double after = number("After");
+    std::pair<double, bool> Patch2LED::getErgDiff(int pwm2,
+                                                  LEDArray *larray,
+                                                  const InData &InTrace,
+                                                  const EventData &triggerBegin,
+                                                  const EventData &triggerEnd,
+                                                  const double &baseVariance) {
+        const int led1 = int(number("LED1"));
+        const int pwm1 = int(number("PWM1"));
+        const int current1 = int(number("Current1"));
+        const int led2 = int(number("LED2"));
+        const int current2 = int(number("Current2"));
+        const int repeats = int(number("Repeats"));
+        const double onDuration = number("OnDuration");
+        const double offDuration = number("OffDuration");
+        const double before = number("Before");
+        const double after = number("After");
 
         double desired = 0;
         double current_signal = 0;
         // start the flickering
         larray->setLEDParameter(led1, led2, pwm1, pwm2, current1, current2,
-                                on_duration, on_duration, off_duration,
-                                off_duration);
+                                onDuration, onDuration, offDuration,
+                                offDuration);
         larray->start(repeats + 1);
+        sleep((onDuration + offDuration) * repeats);
         for (int counter = 0; counter < repeats; counter++) {
             desired += InTrace.mean(
-                    trigger_begin.back(2 * counter) - before / 1000.0,
-                    trigger_begin.back(2 * counter)) -
-                       InTrace.mean(trigger_begin.back(2 * counter) +
-                                    on_duration / 1000.0 - after / 1000.0,
-                                    trigger_begin.back(2 * counter) +
-                                    on_duration / 1000.0);
+                    triggerBegin.back(2 * counter) - before / 1000.0,
+                    triggerBegin.back(2 * counter)) -
+                       InTrace.mean(triggerBegin.back(2 * counter) +
+                                    onDuration / 1000.0 - after / 1000.0,
+                                    triggerBegin.back(2 * counter) +
+                                    onDuration / 1000.0);
             current_signal += InTrace.mean(
-                    trigger_begin.back(2 * counter + 1) - before / 1000.0,
-                    trigger_begin.back(2 * counter + 1)) -
-                              InTrace.mean(trigger_begin.back(2 * counter + 1) +
-                                           on_duration / 1000.0 -
+                    triggerBegin.back(2 * counter + 1) - before / 1000.0,
+                    triggerBegin.back(2 * counter + 1)) -
+                              InTrace.mean(triggerBegin.back(2 * counter + 1) +
+                                           onDuration / 1000.0 -
                                            after / 1000.0,
-                                           trigger_begin.back(2 * counter + 1) +
-                                           on_duration / 1000.0);
+                                           triggerBegin.back(2 * counter + 1) +
+                                           onDuration / 1000.0);
         }
-        double result = (current_signal - desired) / repeats;
-        erg_amplitudes.push_back(result);
+        const double result = (current_signal - desired) / repeats;
+        const double lastResult = ergAmplitudes[ergAmplitudes.size() - 1];
+        ergAmplitudes.push_back(result);
         pwms.push_back(pwm2);
-        amp_desired.push_back(desired);
-        amp_measured.push_back(current_signal);
-        cout << "pwm:" << pwm2 << endl;
-        cout << "desired:" << desired << endl;
-        cout << "current:" << current_signal << endl;
-        cout << "diff:" << result << endl;
-        return std::make_pair(result, desired / repeats);
+        ampDesired.push_back(desired);
+        ampMeasured.push_back(current_signal);
+        bool done = false;
+        if (abs(result - lastResult) <
+            number("EThreshold") * desired / repeats) {
+            if (abs(result) <
+                number("EThreshold2") *
+                abs(ampDesired[ampDesired.size() - 2])) {
+                done = true;
+            }
+        }
+        if (pwm1 == pwm2) {
+            done = true;
+        }
+        return std::make_pair(result, done);
     }
 
-    double Patch2LED::get_erg_var(int pwm2, LEDArray *larray,
-                                  const InData &InTrace,
-                                  const EventData &trigger_begin,
-                                  const EventData &trigger_end) {
-        int led1 = int(number("LED1"));
-        int pwm1 = int(number("PWM1"));
-        int current1 = int(number("Current1"));
-        int led2 = int(number("LED2"));
-        int current2 = int(number("Current2"));
-        int repeats = int(number("Repeats"));
-        double on_duration = number("OnDuration");
-        double off_duration = number("OffDuration");
+    std::pair<double, bool> Patch2LED::getErgVar(const int pwm2,
+                                                 LEDArray *larray,
+                                                 const InData &InTrace,
+                                                 const EventData &trigger_begin,
+                                                 const EventData &trigger_end,
+                                                 const double &baseVariance) {
+        const int led1 = int(number("LED1"));
+        const int pwm1 = int(number("PWM1"));
+        const int current1 = int(number("Current1"));
+        const int led2 = int(number("LED2"));
+        const int current2 = int(number("Current2"));
+        const int repeats = int(number("Repeats"));
+        const double onDuration = number("OnDuration");
+        const double offDuration = number("OffDuration");
 
         // start the flickering
         larray->setLEDParameter(led1, led2, pwm1, pwm2, current1, current2,
-                                on_duration, on_duration, off_duration,
-                                off_duration);
+                                onDuration, onDuration, offDuration,
+                                offDuration);
         larray->start(repeats + 1);
+        sleep((onDuration + offDuration) * repeats);
         double result = InTrace.variance(trigger_begin.back(repeats - 1),
                                          trigger_end.back());
-        erg_amplitudes.push_back(result);
+        const double oldResult = ergAmplitudes[ergAmplitudes.size() - 1];
+        ergAmplitudes.push_back(result);
         pwms.push_back(pwm2);
-        amp_desired.push_back(result);
-        amp_measured.push_back(result);
-        cout << "pwm:" << pwm2 << endl;
-        cout << "var:" << result << endl;
-        return result;
+        ampDesired.push_back(result);
+        ampMeasured.push_back(result);
+        bool done = false;
+        if ((result - oldResult) <
+            number("EThreshold") * baseVariance) {
+            if (abs(result) < number("EThreshold2") * baseVariance) {
+                done = true;
+            }
+        }
+        if (pwm1 == pwm2) {
+            done = true;
+        }
+        return std::make_pair(result, done);
     }
 
-    int Patch2LED::get_intercept(int pwm_m_1, double potential_m_1,
-                                 int pwm_m_2, double potential_m_2) {
-        //cout<<pwm_m_1<<" "<<pwm_m_2<<endl;
-        //cout << potential_m_1<<" "<< potential_m_2<<endl<<endl;
-
-        return pwm_m_1 -
-               (((pwm_m_1 - pwm_m_2) / (potential_m_1 - potential_m_2)) *
-                potential_m_1);
+    int Patch2LED::getEqualPotentialPwm(const int pwm1, const double potential1,
+                                        const int pwm2,
+                                        const double potential2) {
+        return int(round(pwm1 -
+                         (((pwm1 - pwm2) / (potential1 - potential2)) *
+                          potential1)));
     }
 
     addRePro(Patch2LED, intererg);
-}; /* namespace intererg */
+};
+/* namespace intererg */
 
 #include "moc_patch2led.cc"
