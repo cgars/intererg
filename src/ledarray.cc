@@ -37,32 +37,11 @@ namespace intererg {
     }
 
     int LEDArray::open(const string &device, const Options &opts) {
-        serialStream.Open(device);
-        serialStream.SetBaudRate(SerialStreamBuf::BAUD_38400);
-        serialStream.SetCharSize(SerialStreamBuf::CHAR_SIZE_8);
-        serialStream.SetNumOfStopBits(1);
-        serialStream.SetParity(SerialStreamBuf::PARITY_NONE);
-        setDeviceFile(device);
-        setDeviceType(MiscellaneousType);
-        setDeviceClass("LEDArray");
-        setDeviceName("LEDArray");
-        setDeviceVendor("Presh Electronics");
-        return 0;
+        return open(device);
     }
 
-
     int LEDArray::open(Device &device, const Options &opts) {
-        serialStream.Open(device.deviceIdent());
-        serialStream.SetBaudRate(SerialStreamBuf::BAUD_38400);
-        serialStream.SetCharSize(SerialStreamBuf::CHAR_SIZE_8);
-        serialStream.SetNumOfStopBits(1);
-        serialStream.SetParity(SerialStreamBuf::PARITY_NONE);
-        setDeviceFile(device.deviceIdent());
-        setDeviceType(MiscellaneousType);
-        setDeviceClass("LEDArray");
-        setDeviceName("LEDArray");
-        setDeviceVendor("Presh Electronics");
-        return 0;
+        return open(device.deviceIdent());
     }
 
     int LEDArray::open(const string &device) {
@@ -87,13 +66,9 @@ namespace intererg {
         char next_byte[8];
         char command[8];
         sprintf(command, "1%c%05i\r", key, value);
-        printf("command is: %s\n", command);
         serialStream << command;
-        printf("i have send it\n");
         char return_value[5];
-        printf("waiting for reply\n");
         serialStream.read(return_value, 1);
-        printf("got a reply t is:%c\n", return_value);
         return 1;
     }
 
@@ -112,13 +87,10 @@ namespace intererg {
     }
 
     int LEDArray::setLEDParameter(const int &led1, const int &led2,
-                                  const int &pwm1,
-                                  const int &pwm2, const int &current1,
-                                  const int &current2,
+                                  const int &pwm1, const int &pwm2,
+                                  const int &current1, const int &current2,
                                   const int &ontime1, const int &ontime2,
-                                  const int &offtime1,
-                                  const int &offtime2) {
-        printf("wills end commands now\n");
+                                  const int &offtime1, const int &offtime2) {
         sendCommand('a', led1);
         sendCommand('b', led2);
         sendCommand('c', pwm1);
@@ -129,7 +101,6 @@ namespace intererg {
         sendCommand('h', ontime2);
         sendCommand('i', offtime1);
         sendCommand('j', offtime2);
-        printf("send all commands\n");
         return 1;
     }
 

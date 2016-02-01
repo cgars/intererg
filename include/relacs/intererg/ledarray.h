@@ -56,43 +56,33 @@ namespace intererg {
         /*! Destroy a Device. In case the associated device is open, close it. */
         ~LEDArray(void);
 
-        /*! Open the device specified by \a device with options \a opts.
-        On success, in your implementation
-        \a device should be passed to setDeviceFile()
-        and the name and the vendor of the device should be set
-        with setDeviceName() and setDeviceVendor().
-            The info() should be set in the implementation of open()
-        by the info().addNumber(), info().addText(), etc. functions.
-            For adding some default information to info() you may use addInfo().
-        Returns zero on success, or InvalidDevice (or any other negative number
-        indicating the error).
-            \sa isOpen(), close(), reset() */
+        /*!
+         * Open the LedArray specified by device with options opts.
+         */
         int open(const string &device, const Options &opts);
 
-        /*! Open the device specified by \a device with options \a opts.
-        On success, in your implementation
-        \a device should be passed to setDeviceFile()
-        and the name and the vendor of the device should be set
-        with setDeviceName() and setDeviceVendor().
-            The info() should be set in the implementation of open()
-        by the info().addNumber(), info().addText(), etc. functions.
-            For adding some default information to info() you may use addInfo().
-        Returns zero on success, or InvalidDevice (or any other negative number
-        indicating the error).
-            \sa isOpen(), close(), reset() */
+        /*!
+         * Open the LedArray specified by \a device with options \aopts.
+        */
         int open(Device &device, const Options &opts);
 
+        /*!
+        * Open the LedArray specified by \a device.
+*       */
         int open(const string &device);
 
         void close(void);
 
         /*
          * Communicate the instructions defined by
-         * key: a letter which tells what needs to be set
-         * value: the value that key needs to be set yo
+         * \a key: a letter which tells what needs to be set
+         * \a value: the value that key needs to be set yo
          */
         int sendCommand(const char &key, const int &value);
 
+        /*
+         * Return true if this LedArray is open
+         */
         bool isOpen(void) const;
 
         /*

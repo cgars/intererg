@@ -32,12 +32,14 @@ using namespace relacs;
 namespace intererg {
 
 
-/*!
-\class OffRamp
-\brief [RePro] Ramps the Duration of the off pulse
-\author Christian Garbers
-\version 1.0 (Jan 25, 2012)
-*/
+    /*!
+    \class OffRamp
+    \brief [RePro] Ramps the Duration of the off pulse
+    \author Christian Garbers
+    \version 1.0 (Jan 25, 2012)
+     This repro iteratively increaes the duration of the time after the selected
+     led is switched on
+    */
     class OffRamp : public RePro {
         Q_OBJECT
 

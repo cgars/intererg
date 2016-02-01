@@ -79,7 +79,7 @@ namespace intererg {
         for (double off_duration = start_dur;
              off_duration < stop_dur; off_duration += incr_dur) {
             int counter;
-            int indexBefore = trace("V-1").currentIndex();
+            indexBefore = trace("V-1").currentIndex();
             for (counter = 1; counter < repeats; counter++) {
                 larray->setOneLEDParameter(led, pwm, current, on_duration,
                                            off_duration);

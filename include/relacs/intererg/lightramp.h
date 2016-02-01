@@ -34,9 +34,11 @@ namespace intererg {
 
     /*!
     \class LightRamp
-    \brief [RePro] Measured ERG amplitude for increasing light levels
+    \brief [RePro] Measure ERG amplitude for increasing light levels
     \author Christian Garbers
     \version 1.0 (Jan 23, 2012)
+     This Repro iteratively increases the intensity of the selceted led
+     and measures the erg response.
     */
     class LightRamp : public RePro {
         Q_OBJECT
