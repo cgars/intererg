@@ -83,8 +83,8 @@ namespace intererg {
         const EventData &triggerEnd = events("Trigger-2");
         const int led1 = int(number("LED1"));
         int pwm1 = int(number("PWM1"));
-        const double onDuration = number("OnDuration");
-        const double offDuration = number("OffDuration");
+        const int onDuration = int(round(number("OnDuration")));
+        const int offDuration = int(round(number("OffDuration")));
         defaultGuess = 10;
         plots[0].clear();
         plots[1].clear();
@@ -99,7 +99,7 @@ namespace intererg {
                                                              InTrace,
                                                              triggerBegin,
                                                              triggerEnd, 0);
-            result = getPwmDynamic(4000, potentialM1, 1., potentialM2,
+            result = getPwmDynamic(4000, potentialM1, 1, potentialM2,
                                    larray, InTrace, triggerBegin,
                                    triggerEnd, 0, &Patch2LED::getErgDiff);
         }
@@ -123,7 +123,7 @@ namespace intererg {
                                    baseVariance, &Patch2LED::getErgVar);
         }
 
-        // plot results --------------------------------------------------------------
+        // plot results --------------------------------------------------------
         Plot::PointStyle p_style(Plot::Circle, 10, Plot::Red);
         Plot::LineStyle l_style(Plot::Transparent, 1);
         plots.lock();
@@ -245,8 +245,8 @@ namespace intererg {
         const int led2 = int(number("LED2"));
         const int current2 = int(number("Current2"));
         const int repeats = int(number("Repeats"));
-        const double onDuration = number("OnDuration");
-        const double offDuration = number("OffDuration");
+        const int onDuration = int(round(number("OnDuration")));
+        const int offDuration = int(round(number("OffDuration")));
         const double before = number("Before");
         const double after = number("After");
 
@@ -257,7 +257,7 @@ namespace intererg {
                                 onDuration, onDuration, offDuration,
                                 offDuration);
         larray->start(repeats + 1);
-        sleep((onDuration + offDuration) * repeats);
+        sleep((onDuration + offDuration) / 1000 * repeats);
         for (int counter = 0; counter < repeats; counter++) {
             desired += InTrace.mean(
                     triggerBegin.back(2 * counter) - before / 1000.0,
@@ -308,15 +308,15 @@ namespace intererg {
         const int led2 = int(number("LED2"));
         const int current2 = int(number("Current2"));
         const int repeats = int(number("Repeats"));
-        const double onDuration = number("OnDuration");
-        const double offDuration = number("OffDuration");
+        const int onDuration = int(round(number("OnDuration")));
+        const int offDuration = int(round(number("OffDuration")));
 
         // start the flickering
         larray->setLEDParameter(led1, led2, pwm1, pwm2, current1, current2,
                                 onDuration, onDuration, offDuration,
                                 offDuration);
         larray->start(repeats + 1);
-        sleep((onDuration + offDuration) * repeats);
+        sleep((onDuration + offDuration) / 1000 * repeats);
         double result = InTrace.variance(trigger_begin.back(repeats - 1),
                                          trigger_end.back());
         const double oldResult = ergAmplitudes[ergAmplitudes.size() - 1];

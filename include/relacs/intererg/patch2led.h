@@ -32,14 +32,12 @@ using namespace relacs;
 namespace intererg {
 
 
-/*!
-\class Patch2LED
-\brief [RePro] Clamps the erg amplitude by adjusting one led
-\author Christian Garbersdouble
-\version 1.0 (Jan 19, 2012)
-*/
-
-
+    /*!
+    \class Patch2LED
+    \brief [RePro] Clamps the erg amplitude by adjusting one led
+    \author Christian Garbersdouble
+    \version 1.0 (Jan 19, 2012)
+    */
     class Patch2LED : public RePro {
         Q_OBJECT
 
