@@ -2,15 +2,14 @@
   intererg/lightramp.cc
   Measured ERG amplitude for increasing light levels
 
-  RELACS - Relaxed ELectrophysiological data Acquisition, Control, and Stimulation
-  Copyright (C) 2002-2011 Jan Benda <benda@bio.lmu.de>
+  Intererg (C) 2012-2016 Christian Garbers <christian@stuebeweg50.de>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation; either version 3 of the License, or
   (at your option) any later version.
-  
-  RELACS is distributed in the hope that it will be useful,
+
+  Intererg is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
